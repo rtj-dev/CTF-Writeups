@@ -1,0 +1,2 @@
+SMB                      10.129.234.63   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:phantom.vl) (signing:True) (SMBv1:False) (Null Auth:True)
+SMB                      10.129.234.63   445    DC               [+] phantom.vl\: 

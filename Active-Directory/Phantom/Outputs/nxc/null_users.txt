@@ -1,0 +1,10 @@
+[2025-10-13 19:11:46]> /root/.local/bin/nxc smb 10.129.234.63 -u  -p  --users --log null_users.txt
+
+2025-10-13 19:11:47 | smb.py:307 - INFO - SMB         10.129.234.63   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:phantom.vl) (signing:True) (SMBv1:False) (Null Auth:True)
+2025-10-13 19:11:47 | smb.py:453 - INFO - SMB         10.129.234.63   445    DC               [+] phantom.vl\: 
+
+[2025-10-13 19:11:52]> /root/.local/bin/nxc smb 10.129.234.63 -u  -p  --shares --log null_users.txt
+
+2025-10-13 19:11:53 | smb.py:307 - INFO - SMB         10.129.234.63   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:phantom.vl) (signing:True) (SMBv1:False) (Null Auth:True)
+2025-10-13 19:11:53 | smb.py:453 - INFO - SMB         10.129.234.63   445    DC               [+] phantom.vl\: 
+2025-10-13 19:11:53 | smb.py:1355 - INFO - SMB         10.129.234.63   445    DC               [-] Error enumerating shares: STATUS_ACCESS_DENIED

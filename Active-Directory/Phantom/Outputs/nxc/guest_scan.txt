@@ -1,0 +1,4 @@
+[2025-10-13 19:15:36]> /root/.local/bin/nxc smb 10.129.234.63 -u a -p  --log guest_scan.txt
+
+2025-10-13 19:15:37 | smb.py:307 - INFO - SMB         10.129.234.63   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:phantom.vl) (signing:True) (SMBv1:False) (Null Auth:True)
+2025-10-13 19:15:37 | smb.py:453 - INFO - SMB         10.129.234.63   445    DC               [+] phantom.vl\a: (Guest)

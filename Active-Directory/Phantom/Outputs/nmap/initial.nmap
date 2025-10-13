@@ -1,0 +1,43 @@
+# Nmap 7.93 scan initiated Mon Oct 13 18:20:06 2025 as: nmap -sC -sV -oA Outputs/nmap/initial 10.129.234.63
+Nmap scan report for 10.129.234.63
+Host is up (0.043s latency).
+Not shown: 988 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+53/tcp   open  domain        Simple DNS Plus
+88/tcp   open  kerberos-sec  Microsoft Windows Kerberos (server time: 2025-10-13 17:20:28Z)
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+389/tcp  open  ldap          Microsoft Windows Active Directory LDAP (Domain: phantom.vl0., Site: Default-First-Site-Name)
+445/tcp  open  microsoft-ds?
+464/tcp  open  kpasswd5?
+593/tcp  open  ncacn_http    Microsoft Windows RPC over HTTP 1.0
+636/tcp  open  tcpwrapped
+3268/tcp open  ldap          Microsoft Windows Active Directory LDAP (Domain: phantom.vl0., Site: Default-First-Site-Name)
+3269/tcp open  tcpwrapped
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| ssl-cert: Subject: commonName=DC.phantom.vl
+| Not valid before: 2025-10-12T16:34:25
+|_Not valid after:  2026-04-13T16:34:25
+|_ssl-date: 2025-10-13T17:21:12+00:00; -2s from scanner time.
+| rdp-ntlm-info: 
+|   Target_Name: PHANTOM
+|   NetBIOS_Domain_Name: PHANTOM
+|   NetBIOS_Computer_Name: DC
+|   DNS_Domain_Name: phantom.vl
+|   DNS_Computer_Name: DC.phantom.vl
+|   DNS_Tree_Name: phantom.vl
+|   Product_Version: 10.0.20348
+|_  System_Time: 2025-10-13T17:20:29+00:00
+Service Info: Host: DC; OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+|_clock-skew: mean: -2s, deviation: 0s, median: -2s
+| smb2-time: 
+|   date: 2025-10-13T17:20:31
+|_  start_date: N/A
+| smb2-security-mode: 
+|   311: 
+|_    Message signing enabled and required
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+# Nmap done at Mon Oct 13 18:21:16 2025 -- 1 IP address (1 host up) scanned in 70.01 seconds

@@ -1,0 +1,14 @@
+[2025-10-13 19:27:51]> /root/.local/bin/nxc smb 10.129.234.63 -u a -p  --shares --log guest_shares.txt
+
+2025-10-13 19:27:52 | smb.py:307 - INFO - SMB         10.129.234.63   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:phantom.vl) (signing:True) (SMBv1:False) (Null Auth:True)
+2025-10-13 19:27:52 | smb.py:453 - INFO - SMB         10.129.234.63   445    DC               [+] phantom.vl\a: (Guest)
+2025-10-13 19:27:53 | smb.py:1443 - INFO - SMB         10.129.234.63   445    DC               [*] Enumerated shares
+2025-10-13 19:27:53 | smb.py:1444 - INFO - SMB         10.129.234.63   445    DC               Share           Permissions     Remark
+2025-10-13 19:27:53 | smb.py:1445 - INFO - SMB         10.129.234.63   445    DC               -----           -----------     ------
+2025-10-13 19:27:53 | smb.py:1453 - INFO - SMB         10.129.234.63   445    DC               ADMIN$                          Remote Admin
+2025-10-13 19:27:53 | smb.py:1453 - INFO - SMB         10.129.234.63   445    DC               C$                              Default share
+2025-10-13 19:27:53 | smb.py:1453 - INFO - SMB         10.129.234.63   445    DC               Departments Share                 
+2025-10-13 19:27:53 | smb.py:1453 - INFO - SMB         10.129.234.63   445    DC               IPC$            READ            Remote IPC
+2025-10-13 19:27:53 | smb.py:1453 - INFO - SMB         10.129.234.63   445    DC               NETLOGON                        Logon server share 
+2025-10-13 19:27:53 | smb.py:1453 - INFO - SMB         10.129.234.63   445    DC               Public          READ            
+2025-10-13 19:27:53 | smb.py:1453 - INFO - SMB         10.129.234.63   445    DC               SYSVOL                          Logon server share 
