@@ -1,4 +1,4 @@
-# Phantom CTF Example Writeup
+# Phantom CTF Writeup
 
 ## Non-Technical Summary
 
@@ -26,7 +26,7 @@ These issues could allow an attacker to:
 
 "Phantom" is a medium-difficulty Windows Active Directory machine on **Hack the Box**. As usual, the objective was to achieve both **user** and **Root/Administrator** flags. 
 
-### Initial Enumeration
+### Initial Enumeration and Reconnaissance
 
 * **Tools**: `nmap`, `NetExec`
 - Scanned the target with `nmap -sC -sV 10.129.234.63 -oA Outputs/nmap/initial`.
@@ -82,17 +82,69 @@ These issues could allow an attacker to:
   - Enumerating SMB 
     - With no initial access given, null and guest access is attemped
     - `nxc smb 10.129.234.63 -u 'a' -p '' --log guest_scan.txt`
-      - **Output:**
-          ```
+      
+      ```
+      SMB         10.129.234.63   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:phantom.vl) (signing:True) (SMBv1:False) (Null Auth:True)
+      SMB         10.129.234.63   445    DC               [+] phantom.vl\a: (Guest)
+      ```
+      With both guest and null bindings working, further enumeration is done with a guest account as they are typically more permissive.
+    * Using NetExec, we can also attempt to list shares and users. `nxc smb 10.129.234.63 -u 'a' -p '' --shares --log guest_shares.txt`
+      - Shares - Interesting list, "Public" with read access is an immediate thing to note for further enumeration.
+         ```
+          SMB         10.129.234.63   445    DC               [*] Enumerated shares
+          SMB         10.129.234.63   445    DC               Share           Permissions     Remark
+          SMB         10.129.234.63   445    DC               -----           -----------     ------
+          SMB         10.129.234.63   445    DC               ADMIN$                          Remote Admin
+          SMB         10.129.234.63   445    DC               C$                              Default share
+          SMB         10.129.234.63   445    DC               Departments Share
+          SMB         10.129.234.63   445    DC               IPC$            READ            Remote IPC
+          SMB         10.129.234.63   445    DC               NETLOGON                        Logon server share
+          SMB         10.129.234.63   445    DC               Public          READ
+          SMB         10.129.234.63   445    DC               SYSVOL                          Logon server share
+         ```
+      - Users - Nothing here, our guest access is likely limited
+         ```
           SMB         10.129.234.63   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:phantom.vl) (signing:True) (SMBv1:False) (Null Auth:True)
           SMB         10.129.234.63   445    DC               [+] phantom.vl\a: (Guest)
+         ```
+      - We can attempt a RID bruteforce and get a rough list of users or groups
+        `nxc smb 10.129.234.63 -u 'a' -p '' --rid-brute --log rid_scan.txt`
           ```
-      * With both guest and null bindings working, further enumeration is done with a guest account as they are typically more permissive.
-    * Using NetExec, we find we can list shares. `nxc smb 10.129.234.63 -u 'a' -p '' --shares --log guest_shares.txt`
-       
-      
-    
-
+          <SNIP>
+          SMB         10.129.234.63   445    DC               1000: PHANTOM\DC$ (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1101: PHANTOM\DnsAdmins (SidTypeAlias)
+          SMB         10.129.234.63   445    DC               1102: PHANTOM\DnsUpdateProxy (SidTypeGroup)
+          SMB         10.129.234.63   445    DC               1103: PHANTOM\svc_sspr (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1104: PHANTOM\TechSupports (SidTypeGroup)
+          SMB         10.129.234.63   445    DC               1105: PHANTOM\Server Admins (SidTypeGroup)
+          SMB         10.129.234.63   445    DC               1106: PHANTOM\ICT Security (SidTypeGroup)
+          SMB         10.129.234.63   445    DC               1107: PHANTOM\DevOps (SidTypeGroup)
+          SMB         10.129.234.63   445    DC               1108: PHANTOM\Accountants (SidTypeGroup)
+          SMB         10.129.234.63   445    DC               1109: PHANTOM\FinManagers (SidTypeGroup)
+          SMB         10.129.234.63   445    DC               1110: PHANTOM\EmployeeRelations (SidTypeGroup)
+          SMB         10.129.234.63   445    DC               1111: PHANTOM\HRManagers (SidTypeGroup)
+          SMB         10.129.234.63   445    DC               1112: PHANTOM\rnichols (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1113: PHANTOM\pharrison (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1114: PHANTOM\wsilva (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1115: PHANTOM\elynch (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1116: PHANTOM\nhamilton (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1117: PHANTOM\lstanley (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1118: PHANTOM\bbarnes (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1119: PHANTOM\cjones (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1120: PHANTOM\agarcia (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1121: PHANTOM\ppayne (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1122: PHANTOM\ibryant (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1123: PHANTOM\ssteward (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1124: PHANTOM\wstewart (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1125: PHANTOM\vhoward (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1126: PHANTOM\crose (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1127: PHANTOM\twright (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1128: PHANTOM\fhanson (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1129: PHANTOM\cferguson (SidTypeUser)
+          SMB         10.129.234.63   445    DC               1130: PHANTOM\alucas (SidTypeUser)
+          </SNIP>
+          ```
+        </details>
 ### Exploitation Steps
 
 1. 
