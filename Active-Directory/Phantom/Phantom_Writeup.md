@@ -96,10 +96,9 @@ Note the `Public` share, with `READ` permissions, something to note for further 
 
 **3. Listing Users via RID Bruteforce:**
 
-Although direct user listing wasn't successful with guest access, a RID bruteforce attack is a noisy often fruitful option.
+Although direct user listing wasn't successful with guest access, a RID bruteforce attack is a noisy but often fruitful option.
 *   **Command**: `nxc smb 10.129.234.63 -u 'a' -p '' --rid-brute --log Outputs/nxc/rid_scan.txt`
-
-This command generated a comprehensive list of users and groups within the `phantom.vl` domain.
+  
 ```
 <SNIP>
 SMB         10.129.234.63   445    DC               1103: PHANTOM\svc_sspr (SidTypeUser)
@@ -134,6 +133,42 @@ SMB         10.129.234.63   445    DC               1130: PHANTOM\alucas (SidTyp
 ```
 The scan has given a good picture of how the domain is strucutred, groups for IT Staff, HR, Finance (etc.) and a good list of users to leverage for further enumeration and testing.
 An interesting finding is `svc_sspr` (RID 1103), which often indicates a service account used for Self-Service Password Reset. For the complete RID scan output, refer to [rid_scan.txt](Outputs/nxc/rid_scan.txt).
+
+**4. Exploring Shares:**
+
+Spidering available shares is a convenient way to list and/or download all acessible files for which we have access.
+*  **Command:** `nxc smb 10.129.234.63 -u 'a' -p '' -M spider_plus -o DOWNLOAD_FLAG=True OUTPUT_FOLDER=./spider --log spider_shares.txt`
+```
+SPIDER_PLUS 10.129.234.63   445    DC               [+] Saved share-file metadata to "./spider/10.129.234.63.json".
+SPIDER_PLUS 10.129.234.63   445    DC               [*] SMB Shares:           7 (ADMIN$, C$, Departments Share, IPC$, NETLOGON, Public, SYSVOL)
+SPIDER_PLUS 10.129.234.63   445    DC               [*] SMB Readable Shares:  2 (IPC$, Public)
+SPIDER_PLUS 10.129.234.63   445    DC               [*] SMB Filtered Shares:  1
+SPIDER_PLUS 10.129.234.63   445    DC               [*] Total folders found:  0
+SPIDER_PLUS 10.129.234.63   445    DC               [*] Total files found:    1
+SPIDER_PLUS 10.129.234.63   445    DC               [*] File size average:    14.22 KB
+SPIDER_PLUS 10.129.234.63   445    DC               [*] File size min:        14.22 KB
+SPIDER_PLUS 10.129.234.63   445    DC               [*] File size max:        14.22 KB
+SPIDER_PLUS 10.129.234.63   445    DC               [*] File unique exts:     1 (eml)
+SPIDER_PLUS 10.129.234.63   445    DC               [*] Downloads successful: 1
+SPIDER_PLUS 10.129.234.63   445    DC               [+] All files processed successfully.
+```
+Exploring the metadata report has given a single file to investiage.
+
+```
+{
+    "Public": {
+        "tech_support_email.eml": {
+            "atime_epoch": "2024-07-06 17:08:50",
+            "ctime_epoch": "2024-07-06 17:08:50",
+            "mtime_epoch": "2024-07-06 17:09:28",
+            "size": "14.22 KB"
+        }
+    }
+}
+```
+
+
+
 
 ### Exploitation Steps
 
