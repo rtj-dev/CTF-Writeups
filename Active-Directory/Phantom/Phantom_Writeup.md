@@ -5,7 +5,9 @@
 
 ### Overview
 
-The "Phantom" CTF simulates a Windows Active Directory network, typical of corporate environments. This writeup details the steps taken to gain unauthorized access and compromise the domain controller with a hybrid aspect of typical pentesting professional-esque reporting.
+The "Phantom" CTF simulates a Windows Active Directory network, typical of corporate environments. This writeup details the steps taken to gain unauthorized access and compromise the domain controller with a hybrid aspect of typical pentesting professional-esque reporting. 
+
+As such, not all typical extensive enumeration steps that were performed are documented.
 
 ### Key Findings
 
@@ -189,9 +191,11 @@ SMB         10.129.234.63   445    DC               [-] phantom.vl\ssteward:Ph4n
 A positive hit for `ibryant`, we now have active credentials to iterate over our enumeration process again.
 
 ### Further Enumeration
-  **Exploring Shares**
 
-  Taking another look at shares, we can see `ibryant` has `READ` access to the `Departments Share`
+*   **Tools**: `nmap`, `NetExec`, `RustHound`, `BloodHound`
+
+**Exploring Shares**
+  
 *   **Command**: `nxc smb 10.129.234.63 -u ibryant -p 'Ph4nt0m@5t4rt!' --users --log ibryant_shares.txt'`
 ```
 SMB         10.129.234.63   445    DC               [*] Enumerated shares
@@ -205,6 +209,67 @@ SMB         10.129.234.63   445    DC               NETLOGON        READ        
 SMB         10.129.234.63   445    DC               Public          READ
 SMB         10.129.234.63   445    DC               SYSVOL          READ            Logon server share
 ```
+Taking another look at shares, we can see `ibryant` has `READ` access to the `Departments Share` which we will immediately explore.
+
+```
+Finance/Expense_Reports.pdf
+Finance/Invoice-Template.pdf
+Finance/TaxForm.pdf
+HR/Employee-Emergency-Contact-Form.pdf
+HR/EmployeeHandbook.pdf
+HR/Health_Safety_Information.pdf
+HR/NDA_Template.pdf
+IT/mRemoteNG-Installer-1.76.20.24615.msi
+IT/TeamViewerQS_x64.exe
+IT/TeamViewer_Setup_x64.exe
+IT/veracrypt-1.26.7-Ubuntu-22.04-amd64.deb
+IT/Wireshark-4.2.5-x64.exe
+IT/Backup/IT_BACKUP_201123.hc
+```
+Spidering and downloading the share contents displays a range of departmental resources. While the rest were unremarkable, `IT` provides some interesting insights.
+
+- **Veracrypt** `veracrypt-1.26.7-Ubuntu-22.04-amd64.deb` presence implies some use of encrypted storage.
+
+- **IT/Backup** `IT_BACKUP_201123.hc` in the context of veracrypt, tells us this is an encrypted container/drive. We'll take note of this and explore later.
+
+**Bloodhound**
+
+Using my collector of choice `RustHound`, we'll look to get a overview of the domain and any potential weak DACLS or potential high value targets with `BloodHound`.
+
+*   **Command**: `rusthound -u ibryant -p 'Ph4nt0m@5t4rt!' --domain phantom.vl --ldapip 10.129.234.63 --zip --output ./BloohoundIngest`
+```
+<SNIP>
+[2025-10-13T22:07:35Z INFO  rusthound::json::maker] 30 users parsed!
+[2025-10-13T22:07:35Z INFO  rusthound::json::maker] 69 groups parsed!
+[2025-10-13T22:07:35Z INFO  rusthound::json::maker] 1 computers parsed!
+[2025-10-13T22:07:35Z INFO  rusthound::json::maker] 5 ous parsed!
+[2025-10-13T22:07:35Z INFO  rusthound::json::maker] 1 domains parsed!
+[2025-10-13T22:07:35Z INFO  rusthound::json::maker] 2 gpos parsed!
+[2025-10-13T22:07:35Z INFO  rusthound::json::maker] 21 containers parsed!
+[2025-10-13T22:07:35Z INFO  rusthound::json::maker] ./BloohoundIngest/20251013230735_phantom-vl_rusthound.zip created!
+</SNIP>
+```
+**Immediate Findings**
+
+Using previous informaiton obtained and Bloodhound ability to present data, provides a strong overview of potential targets and/or weaknesses.
+
+**Owned User**
+
+A quick look into `ibryant` reveals nothing remarkable, but provides useful info on our group membership, immediate surroundings and our current limitaitons.
+
+**[Ibryant Shortest Path](Outputs/Screenshots/ibryant_shortest.png)**
+
+**[Tech Support Group](Outputs/Screenshots/techsupport_shortest.png)**
+
+
+
+
+
+
+
+
+
+
 
 
 
