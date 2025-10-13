@@ -5,12 +5,12 @@ Welcome!
 I plan to use this repository to document my learning journey in offensive security. These writeups will attempt showcase my ability to identify vulnerabilities, exploit systems, and communicate findings to both technical and non-technical audiences, while highlighting my progress and passion for offensive security.
 
 ## Structure
-- **Active-Directory/**: Challenges involving Windows Active Directory, like Kerberos attacks and domain escalation (e.g., ADCS, RBCD).
-- **Web-Exploitation/**: Web-based vulnerabilities, such as SQL injection and cross-site scripting (XSS).
-- **Linux/**: Linux privilege escalation and service exploitation techniques.
-- **Windows/**: Windows-specific exploits and/or privilege escalation
-- **Cloud/**: Cloud security challenges (e.g., AWS, Azure misconfigurations)
-- **AI/LLM/**: Experiments with AI and large language model security (e.g., prompt injection), an emerging area I’m studying.
+- **Active-Directory**: Challenges involving Windows Active Directory, like Kerberos attacks and domain escalation (e.g., ADCS, RBCD).
+- **Web-Exploitation**: Web-based vulnerabilities, such as SQL injection and cross-site scripting (XSS).
+- **Linux**: Linux privilege escalation and service exploitation techniques.
+- **Windows**: Windows-specific exploits and/or privilege escalation
+- **Cloud**: Cloud security challenges (e.g., AWS, Azure misconfigurations)
+- **AI/LLM**: Experiments with AI and large language model security (e.g., prompt injection), an emerging area I’m studying.
 - **Tools.md**: A list of tools I often use, like Nmap, NetExec, and Burp Suite.
 - **Resources.md**: Resources I often reference or use, including tutorials, blogs, and courses.
 
