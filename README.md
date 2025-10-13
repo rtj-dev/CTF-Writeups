@@ -18,7 +18,7 @@ I plan to use this repository to document my learning journey in offensive secur
 - [Phantom (Active Directory)](Active-Directory/Phantom/Phantom_Writeup.md): Exploiting SMB shares and escalating with Resource-Based Constrained Delegation to compromise a domain.
 
 ## Notes
-- All writeups are based on CTF environments (e.g., Hack The Box, TryHackMe, PwnedLabs), contain no sensitive data and are typically "retired macines".
+- All writeups are based on CTF environments (e.g., Hack The Box, TryHackMe, PwnedLabs), contain no sensitive data and are typically "retired machines".
 - Writeups will often blend CTF and professional pentesting logic, with the intention of practising the latter.
 - I’m actively adding new writeups as I tackle more challenges and learn new techniques.
  
