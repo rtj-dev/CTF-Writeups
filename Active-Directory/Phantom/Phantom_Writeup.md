@@ -5,7 +5,7 @@
 
 ### Overview
 
-The "Phantom" CTF simulates a Windows Active Directory network, typical of corporate environments. This writeup details the steps taken to gain unauthorized access and compromise the domain controller.
+The "Phantom" CTF simulates a Windows Active Directory network, typical of corporate environments. This writeup details the steps taken to gain unauthorized access and compromise the domain controller with a hybrid aspect of typical pentesting professional-esque reporting.
 
 ### Key Findings
 
@@ -24,8 +24,8 @@ These identified issues could allow an attacker to:
 ### Recommendations
 
 To mitigate the discovered vulnerabilities, it is recommended to:
-*   Review and restrict SMB share permissions, especially for guest accounts.
-*   Implement 
+*   Review and restrict null and/or guest access to the domain.
+*   Do not publicly share onboarding credentials
 *   Regularly 
 
 ---
@@ -152,7 +152,7 @@ SPIDER_PLUS 10.129.234.63   445    DC               [*] File unique exts:     1 
 SPIDER_PLUS 10.129.234.63   445    DC               [*] Downloads successful: 1
 SPIDER_PLUS 10.129.234.63   445    DC               [+] All files processed successfully.
 ```
-Exploring the metadata report has given a single file to investiage. [tech_support_email.eml](Outputs/nxc/tech_support_email.eml)
+Exploring the metadata report has given a single file to investiage, [tech_support_email.eml](Outputs/nxc/tech_support_email.eml).
 
 ```
 {
@@ -167,9 +167,11 @@ Exploring the metadata report has given a single file to investiage. [tech_suppo
 }
 ```
 For visibility, we'll use an .eml viewer and explore what we have.
-![EML Preview](Outputs/Screenshots/support_email.png)
+![EML Preview](Outputs/Screenshots/support_eml.png)
+An email from `alucas@phantom.vl`, who we can note was also listed in our user enumeration earlier, to `techsupport@phantom.vl`
 
-
+Viewing the PDF attached gives us a critical finding `Password: Ph4nt0m@5t4rt!` for a potential password spray against our user list.
+![welcome_template](Outputs/Screenshots/onboarding_pdf.png) 
 
 ### Exploitation Steps
 
