@@ -13,7 +13,7 @@ Welcome to my Capture The Flag (CTF) writeups portfolio! I’m hope to use this 
 - **Resources.md**: Resources helping me grow, including tutorials, blogs, and courses.
 
 ## Sample Writeups
-- [Phantom (Active Directory)](Active-Directory/Phantom/Phantom_Writeup.md): Exploiting SMB shares and Resource-Based Constrained Delegation to compromise a domain.
+- [Phantom (Active Directory)](Active-Directory/Phantom/Phantom_Writeup): Exploiting SMB shares and Resource-Based Constrained Delegation to compromise a domain.
 
 ## Contact
 - LinkedIn: www.linkedin.com/in/joel-r-09170a337 
