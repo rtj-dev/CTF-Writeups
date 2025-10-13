@@ -15,7 +15,7 @@ I plan to use this repository to document my learning journey in offensive secur
 - **Resources.md**: Resources I often reference or use, including tutorials, blogs, and courses.
 
 ## Sample Writeups
-- [Phantom (Active Directory)](Active-Directory/Phantom/Phantom_Writeup.md): Exploiting SMB shares and Resource-Based Constrained Delegation to compromise a domain.
+- [Phantom (Active Directory)](Active-Directory/Phantom/Phantom_Writeup.md): Exploiting SMB shares and escalating with Resource-Based Constrained Delegation to compromise a domain.
 
 ## Notes
 - All writeups are based on CTF environments (e.g., Hack The Box, TryHackMe, PwnedLabs), contain no sensitive data and are typically "retired macines".
