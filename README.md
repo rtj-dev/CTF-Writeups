@@ -6,8 +6,8 @@ I plan to use this repository to document my learning journey in offensive secur
 
 ## Structure
 - **Active-Directory**: Challenges involving Windows Active Directory, like Kerberos attacks and domain escalation (e.g., ADCS, RBCD).
-- **Web-Exploitation**: Web-based vulnerabilities, such as SQL injection and cross-site scripting (XSS).
-- **Linux**: Linux privilege escalation and service exploitation techniques.
+- **Web-Exploitation**: Web-based vulnerabilities, such as SQL injection or cross-site scripting (XSS).
+- **Linux**: Linux-specific exploits and/or privilege escalation
 - **Windows**: Windows-specific exploits and/or privilege escalation
 - **Cloud**: Cloud security challenges (e.g., AWS, Azure misconfigurations)
 - **AI/LLM**: Experiments with AI and large language model security (e.g., prompt injection), an emerging area I’m studying.
