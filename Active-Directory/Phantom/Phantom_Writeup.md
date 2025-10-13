@@ -199,13 +199,8 @@ Viewing the PDF attached gives us a critical finding `Password: Ph4nt0m@5t4rt!` 
 
 ### Mitigations
 
-*   **Strong Password Policies**: Enforce complex and unique passwords for all accounts, especially service accounts.
-*   **Least Privilege**: Restrict permissions for shares and user accounts to only what is necessary.
-*   **Regular Audits**: Conduct frequent audits of Active Directory and SMB configurations.
-*   **Monitor Guest Accounts**: Disable or strictly monitor guest accounts and null sessions.
+
 
 ### Lessons Learned
 
-*   Thorough initial enumeration is crucial.
-*   Service accounts (`svc_`) are often a weak link.
-*   SMB misconfigurations can expose significant attack surfaces.
+
