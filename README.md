@@ -1,6 +1,6 @@
 # CTF Writeups Portfolio
 
-Welcome to my Capture The Flag (CTF) writeups portfolio! I’m hope to use this repository to document my learning journey in offensive security. These writeups showcase my ability to identify vulnerabilities, exploit systems, and communicate findings to both technical and non-technical audiences, while highlighting my progress and passion for cybersecurity.
+Welcome to my Capture The Flag (CTF) writeups portfolio! I plan to use this repository to document my learning journey in offensive security. These writeups showcase my ability to identify vulnerabilities, exploit systems, and communicate findings to both technical and non-technical audiences, while highlighting my progress and passion for cybersecurity.
 
 ## Structure
 - **Active-Directory/**: Challenges involving Windows Active Directory, like Kerberos attacks and domain escalation (e.g., ADCS, RBCD).
