@@ -251,7 +251,7 @@ Using my collector of choice `RustHound`, we'll look to get a overview of the do
 ```
 **Immediate Findings**
 
-Using previous informaiton obtained and Bloodhound ability to present data, provides a strong overview of potential targets and/or weaknesses.
+Using previous informaiton obtained and Bloodhound's ability to graphically present data, provides a strong overview of potential targets and/or weaknesses.
 
 **Owned User**
 
@@ -261,14 +261,21 @@ A quick look into `ibryant` reveals nothing remarkable, but provides useful info
 
 **[Tech Support Group](Outputs/Screenshots/techsupport_shortest.png)**
 
+**Future HVTs**
 
+Looking outside our current control, highlights some very interesting findings and the likely potential pathway for full domain compromise.
 
+**SVC_SSPR**
 
+This service account we discovered earlier, not only has `REMOTE MANAGEMNT USERS` membership, but also has a direct route into `ICT Security` through `ForceChangePassword` over `rnichols`.
 
+[SVC_SPR_Control](Outputs/Screenshots/svc_sspr_control.png)
 
+**ICT Security**
 
+From here, we'd have a potential RBCD DACL directly over the DC with `AddAllowedToAct`. Making `svc_sspr` priority one.
 
-
+![ICT_SECURITY](Outputs/Screenshots/RBCD.png)
 
 
 
