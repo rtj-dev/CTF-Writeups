@@ -152,7 +152,7 @@ SPIDER_PLUS 10.129.234.63   445    DC               [*] File unique exts:     1 
 SPIDER_PLUS 10.129.234.63   445    DC               [*] Downloads successful: 1
 SPIDER_PLUS 10.129.234.63   445    DC               [+] All files processed successfully.
 ```
-Exploring the metadata report has given a single file to investiage.
+Exploring the metadata report has given a single file to investiage. [tech_support_email.eml](Outputs/nxc/tech_support_email.eml)
 
 ```
 {
@@ -166,7 +166,8 @@ Exploring the metadata report has given a single file to investiage.
     }
 }
 ```
-
+For visibility, we'll use an .eml viewer and explore what we have.
+![EML Preview](Outputs/Screenshots/support_email.png)
 
 
 
