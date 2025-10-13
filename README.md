@@ -15,11 +15,8 @@ Welcome to my Capture The Flag (CTF) writeups portfolio! I plan to use this repo
 ## Sample Writeups
 - [Phantom (Active Directory)](Active-Directory/Phantom/Phantom_Writeup): Exploiting SMB shares and Resource-Based Constrained Delegation to compromise a domain.
 
-## Contact
-- LinkedIn: www.linkedin.com/in/joel-r-09170a337 
-
 ## Notes
 - All writeups are based on CTF environments (e.g., Hack The Box, TryHackMe, PwnedLabs), contain no sensitive data and are typically "retired macines".
 - I’m actively adding new writeups as I tackle more challenges and learn new techniques.
-
+ 
 *Last updated: October 2025*
