@@ -19,7 +19,7 @@ Welcome to my Capture The Flag (CTF) writeups portfolio! I’m hope to use this 
 - LinkedIn: www.linkedin.com/in/joel-r-09170a337 
 
 ## Notes
-- All writeups are based on CTF environments (e.g., Hack The Box, TryHackMe, PwnedLabs) and contain no sensitive data and are typically "retired macines".
+- All writeups are based on CTF environments (e.g., Hack The Box, TryHackMe, PwnedLabs), contain no sensitive data and are typically "retired macines".
 - I’m actively adding new writeups as I tackle more challenges and learn new techniques.
 
 *Last updated: October 2025*
