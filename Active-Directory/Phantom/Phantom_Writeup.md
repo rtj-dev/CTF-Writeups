@@ -273,9 +273,34 @@ This service account we discovered earlier, not only has `REMOTE MANAGEMNT USERS
 
 **ICT Security**
 
-From here, we'd have a potential RBCD DACL directly over the DC with `AddAllowedToAct`. Making `svc_sspr` priority one.
+From here, we'd have a potential RBCD DACL directly over the DC with `AddAllowedToAct`, making `svc_sspr` priority one.
 
 ![ICT_SECURITY](Outputs/Screenshots/RBCD.png)
+
+### Privilege Escalation
+
+
+
+**Veracrypt**
+
+Returning to our veracrypt container, using external resources, we can learn that the password hash stored in a container, is the first 512 bits of the file.
+
+*   **Command**: `dd if=./IT_BACKUP_201123.hc of=./hash bs=512 count=1`
+
+**Cracking**
+
+An important factor to note when cracking is speed - running through a popular list like rockyou.txt over VeraCrypt SHA512 + XTS 1024 bit will take a long time, there is also a PIM angle we can explore too.
+
+Here we'll take note of the following info provided by the HTB overlords.
+![HTB_Notice](Outputs/Screenshots/info.png)
+
+We'll use crunch (https://github.com/crunchsec/crunch), to generate a simple wordlist based on these exact parameters.
+*   **Command**:`crunch 12 12 -t 'Phantom202%^' -o wordlist.txt`
+
+**Hashcat***
+*   **Command**: 
+
+
 
 
 
