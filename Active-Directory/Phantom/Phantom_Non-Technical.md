@@ -11,7 +11,7 @@ As such, not all typical extensive enumeration steps that were performed are doc
 During the CTF, several vulnerabilities were identified, including:
 *   Weak SMB permissions allowing guest access to sensitive shares.
 *   The presence 
-*   Specific Active Directory misconfigurations that facilitated privilege escalation like RBCD.
+*   Specific Active Directory misconfigurations that facilitated privilege escalation
 
 ### Impact
 
