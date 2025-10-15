@@ -283,7 +283,7 @@ From here, we'd have a potential RBCD DACL directly over the DC with `AddAllowed
 
 **Veracrypt**
 
-Returning to our veracrypt container, using external resources, we can learn that the password hash stored in a container, is the first 512 bits of the file.
+Returning to our veracrypt container, using external resources, we can learn that the first 512 bytes contain the encrypted volume header we can then feed to hashcat.
 
 *   **Command**: `dd if=./IT_BACKUP_201123.hc of=./hash bs=512 count=1`
 
