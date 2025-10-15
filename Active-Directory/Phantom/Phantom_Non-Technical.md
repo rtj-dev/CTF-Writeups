@@ -1,10 +1,5 @@
 ## Non-Technical Summary (DRAFT IDEAS)
 
-### Overview
-
-The "Phantom" CTF simulates a Windows Active Directory network, typical of corporate environments. This writeup details the steps taken to gain unauthorized access and compromise the domain controller with a hybrid aspect of typical pentesting professional-esque reporting. 
-
-As such, not all typical extensive enumeration steps that were performed are documented.
 
 ### Key Findings
 
