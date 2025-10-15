@@ -289,7 +289,7 @@ Returning to our veracrypt container, using external resources, we can learn tha
 
 **Cracking**
 
-An important factor to note when cracking is speed - running through a popular list like rockyou.txt over VeraCrypt SHA512 + XTS 1024 bit will take a long time, there is also a PIM angle we can explore too.
+An important factor to note when cracking is speed - running through a popular list like rockyou.txt over VeraCrypt SHA512 + XTS 1024 bit will take a long time.
 
 Here we'll take note of the following info provided by the HTB overlords.
 ![HTB_Notice](Outputs/Screenshots/info.png)
@@ -298,7 +298,7 @@ We'll use crunch (https://github.com/crunchsec/crunch), to generate a simple wor
 *   **Command**:`crunch 12 12 -t 'Phantom202%^' -o wordlist.txt`
 
 **Hashcat***
-*   **Command**: 
+*   **Command**: `hashcat -a 0 -m 13722 hash wordlist.txt`
 
 
 
