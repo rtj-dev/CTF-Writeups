@@ -5,7 +5,7 @@ Welcome!
 I plan to use this repository to document my learning journey in offensive security. These writeups will attempt showcase my ability to identify vulnerabilities, exploit systems, and communicate findings to both technical and non-technical audiences, while highlighting my progress and passion for offensive security.
 
 ## Structure
-- **Active-Directory**: Challenges involving Windows Active Directory, like Kerberos attacks and domain escalation (e.g., ADCS, RBCD).
+- **Active-Directory**: Challenges involving Windows Active Directory, like RBCD or ESC1-16
 - **Web-Exploitation**: Web-based vulnerabilities, such as SQL injection or cross-site scripting (XSS).
 - **Linux**: Linux-specific exploits and/or privilege escalation
 - **Windows**: Windows-specific exploits and/or privilege escalation
